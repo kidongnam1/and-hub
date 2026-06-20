@@ -11,6 +11,8 @@
 #   files-clean     내용 중복 파일 정리 → 휴지통으로 이동
 #   folders         내용이 같은 중복 폴더 미리보기            [안 지움]
 #   folders-clean   중복 폴더 정리 → 휴지통으로 이동
+#   all-preview     세 가지(파일+이름+폴더) 모두 미리보기      [안 지움]
+#   all             세 가지 모두 정리 → 휴지통으로 이동
 #   empty-trash     _duplicates_trash 휴지통 완전 비우기
 #   help            이 도움말 보기
 #
@@ -33,7 +35,7 @@ main() {
     cd "$here"
 
     if [ "$cmd" = "help" ] || [ "$cmd" = "-h" ] || [ "$cmd" = "--help" ]; then
-        sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'
         exit 0
     fi
 
@@ -58,7 +60,19 @@ main() {
         echo "[경고] git pull 실패 — 현재 폴더의 버전으로 계속합니다."
     }
 
-    # 2) 명령에 맞는 옵션 정하기
+    # 2) 'all' 계열은 세 가지를 차례로 실행
+    if [ "$cmd" = "all" ] || [ "$cmd" = "all-preview" ]; then
+        local extra=()
+        [ "$cmd" = "all" ] && extra=(--delete --trash)
+        run_step "$py" "$target" "[1/3] 내용 중복 파일" --recursive "${extra[@]}"
+        run_step "$py" "$target" "[2/3] 이름 사본"       --by-name --recursive "${extra[@]}"
+        run_step "$py" "$target" "[3/3] 중복 폴더"        --folders "${extra[@]}"
+        echo; echo "==> 세 가지 모두 완료."
+        [ "$cmd" = "all-preview" ] && echo "실제로 지우려면:  bash dedup.sh all"
+        exit 0
+    fi
+
+    # 단일 명령에 맞는 옵션 정하기
     local args=()
     case "$cmd" in
         preview)        args=(--by-name --recursive) ;;
@@ -69,7 +83,7 @@ main() {
         folders-clean)  args=(--folders --delete --trash) ;;
         *)
             echo "[오류] 모르는 명령: $cmd"
-            echo "사용 가능: preview clean files files-clean folders folders-clean empty-trash help"
+            echo "사용 가능: preview clean files files-clean folders folders-clean all-preview all empty-trash help"
             exit 1
             ;;
     esac
@@ -78,6 +92,14 @@ main() {
     echo "==> 실행: python3 dedup_downloads.py $target ${args[*]}"
     echo
     python3 "$py" "$target" "${args[@]}"
+}
+
+# 한 단계 실행 헬퍼: 제목 출력 후 python 스크립트 호출
+run_step() {
+    local py="$1" target="$2" title="$3"; shift 3
+    echo
+    echo "================= $title ================="
+    python3 "$py" "$target" "$@"
 }
 
 main "$@"

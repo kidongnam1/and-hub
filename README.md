@@ -31,6 +31,8 @@ bash dedup.sh files          # 내용 중복 파일 미리보기
 bash dedup.sh files-clean    # 내용 중복 파일 정리 → 휴지통
 bash dedup.sh folders        # 중복 폴더 미리보기
 bash dedup.sh folders-clean  # 중복 폴더 정리 → 휴지통
+bash dedup.sh all-preview    # 세 가지(파일+이름+폴더) 모두 미리보기
+bash dedup.sh all            # 세 가지 모두 정리 → 휴지통  (가장 추천)
 bash dedup.sh empty-trash    # 휴지통(_duplicates_trash) 비우기
 bash dedup.sh help           # 도움말
 
