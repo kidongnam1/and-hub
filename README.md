@@ -20,7 +20,25 @@ git pull
 curl -O https://raw.githubusercontent.com/kidongnam1/and-hub/main/dedup_downloads.py
 ```
 
-### 실행 예시
+### 가장 쉬운 방법: dedup.sh (자동 업데이트 + 실행)
+`dedup.sh`는 깃허브에서 최신 코드를 스스로 받은 뒤(`git pull`) 청소를 실행합니다.
+```bash
+cd ~/and-hub
+
+bash dedup.sh preview        # 이름 사본( (2),(3)… ) 미리보기  [안 지움]
+bash dedup.sh clean          # 이름 사본 정리 → 휴지통으로 이동
+bash dedup.sh files          # 내용 중복 파일 미리보기
+bash dedup.sh files-clean    # 내용 중복 파일 정리 → 휴지통
+bash dedup.sh folders        # 중복 폴더 미리보기
+bash dedup.sh folders-clean  # 중복 폴더 정리 → 휴지통
+bash dedup.sh empty-trash    # 휴지통(_duplicates_trash) 비우기
+bash dedup.sh help           # 도움말
+
+# 다른 폴더를 청소하려면 뒤에 경로를 붙이면 됩니다
+bash dedup.sh clean /storage/emulated/0/DCIM
+```
+
+### (직접 실행) 실행 예시
 ```bash
 # ① 중복 파일 미리보기 (하위 폴더 포함, 아무것도 안 지움)
 python3 dedup_downloads.py /storage/emulated/0/Download --recursive
