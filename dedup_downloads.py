@@ -8,6 +8,7 @@
 import argparse
 import hashlib
 import os
+import re
 import shutil
 import sys
 from collections import defaultdict
@@ -15,6 +16,8 @@ from collections import defaultdict
 DEFAULT_DIR = "/storage/emulated/0/Download"
 CHUNK = 1024 * 1024
 TRASH_NAME = "_duplicates_trash"
+# 이름 끝의 " (숫자)" 패턴 (예: "사진 (2)", "report(3)") — 다운로드 사본 표시
+NAME_SUFFIX_RE = re.compile(r"^(.+?)\s*\((\d+)\)$")
 
 
 def human(size):
@@ -217,6 +220,50 @@ def dedup_folders(root, args):
     summarize(args, groups, removed, freed, "폴더")
 
 
+# ---------------------------------------------------------------- 이름 모드
+
+
+def dedup_by_name(root, args):
+    """이름 끝의 ' (숫자)' 사본을 중복으로 본다 (내용은 비교하지 않음).
+
+    같은 폴더에서 'name.ext', 'name (1).ext', 'name (2).ext' 를 한 묶음으로
+    보고, 접미사 없는 원본(없으면 가장 작은 숫자)만 남긴다.
+    """
+    # key=(폴더, 기본이름, 확장자) -> [(번호, 경로)],  번호 -1 = 접미사 없는 원본
+    groups = defaultdict(list)
+    for path in iter_files(root, args.recursive):
+        if not os.path.isfile(path) or os.path.islink(path):
+            continue
+        stem, ext = os.path.splitext(os.path.basename(path))
+        m = NAME_SUFFIX_RE.match(stem)
+        if m:
+            base, num = m.group(1), int(m.group(2))
+        else:
+            base, num = stem, -1
+        groups[(os.path.dirname(path), base, ext.lower())].append((num, path))
+
+    trash_dir = os.path.join(root, TRASH_NAME)
+    total_groups = removed = freed = 0
+
+    for (_, base, ext), members in sorted(groups.items()):
+        if len(members) < 2:
+            continue  # 사본이 없는 단독 파일은 건드리지 않는다
+        members.sort()  # 번호 오름차순, 원본(-1)이 맨 앞
+        keep = members[0][1]
+        total_groups += 1
+        print(f"\n[이름 중복 {len(members)}개 · {base}{ext}]")
+        print(f"  남김:   {keep}")
+        for _, p in members[1:]:
+            try:
+                freed += os.path.getsize(p)
+            except OSError:
+                pass
+            removed += 1
+            remove_path(p, args, trash_dir)
+
+    summarize(args, total_groups, removed, freed, "파일")
+
+
 # ---------------------------------------------------------------- 공통
 
 
@@ -239,6 +286,8 @@ def main():
                     help="검사할 폴더 (기본: %(default)s)")
     ap.add_argument("--folders", action="store_true",
                     help="파일 대신 내용이 같은 중복 '폴더'를 찾는다 (항상 재귀)")
+    ap.add_argument("--by-name", dest="by_name", action="store_true",
+                    help="이름 끝 ' (숫자)' 사본을 중복으로 본다 (내용 비교 안 함)")
     ap.add_argument("--delete", action="store_true", help="실제로 삭제 실행")
     ap.add_argument("--trash", action="store_true",
                     help="삭제 대신 _duplicates_trash 폴더로 이동")
@@ -253,6 +302,8 @@ def main():
 
     if args.folders:
         dedup_folders(root, args)
+    elif args.by_name:
+        dedup_by_name(root, args)
     else:
         dedup_files(root, args)
 

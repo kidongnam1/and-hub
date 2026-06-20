@@ -33,6 +33,12 @@ python3 dedup_downloads.py /storage/emulated/0/Download --folders
 
 # ④ 중복 폴더 정리 — 휴지통으로 이동
 python3 dedup_downloads.py /storage/emulated/0/Download --folders --delete --trash
+
+# ⑤ 이름 사본 미리보기 — "사진 (2).png" 처럼 끝에 (숫자)가 붙은 파일
+python3 dedup_downloads.py /storage/emulated/0/Download --by-name --recursive
+
+# ⑥ 이름 사본 정리 — 휴지통으로 이동
+python3 dedup_downloads.py /storage/emulated/0/Download --by-name --recursive --delete --trash
 ```
 
 ### 옵션
@@ -43,6 +49,7 @@ python3 dedup_downloads.py /storage/emulated/0/Download --folders --delete --tra
 | `--trash` | 삭제 대신 `_duplicates_trash` 폴더로 이동 (가장 안전, 복구 가능) |
 | `--recursive` | 하위 폴더까지 검사 (파일 모드 전용) |
 | `--folders` | 파일 대신 내용이 같은 중복 **폴더**를 탐지 (항상 재귀) |
+| `--by-name` | 이름 끝 ` (숫자)` 사본을 중복으로 처리 (**내용은 비교 안 함**) |
 
 권장 순서: 먼저 옵션 없이 미리보기 → 결과 확인 → `--delete --trash`로 정리.
 각 그룹에서 가장 얕고 짧은 경로의 파일/폴더를 남기고 나머지를 정리합니다.
