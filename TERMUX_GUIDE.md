@@ -51,6 +51,17 @@ git pull --ff-only origin main
 
 ## 3. 파일 및 원클릭 자동 실행하기
 
+처음에는 아래 원터치 준비를 먼저 실행합니다. 업데이트, 권한 설정, 점검, 위젯 등록까지 처리합니다.
+
+```bash
+cd ~/and-hub
+git pull --ff-only origin main
+chmod +x scripts/*.sh
+./scripts/phone_one_touch_setup.sh
+```
+
+그다음 평소 실행은 아래 한 줄입니다.
+
 ```bash
 cd ~/and-hub
 chmod +x start.sh update_and_start.sh dedup.sh scripts/*.sh

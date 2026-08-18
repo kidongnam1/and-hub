@@ -45,6 +45,15 @@ bash dedup.sh clean /storage/emulated/0/DCIM
 ### 모바일 웹앱 실행
 이미 `~/and-hub` 폴더가 있으면 다시 clone하지 말고 아래만 실행합니다.
 
+원터치 준비:
+
+```bash
+cd ~/and-hub
+git pull --ff-only origin main
+chmod +x scripts/*.sh
+./scripts/phone_one_touch_setup.sh
+```
+
 ```bash
 cd ~/and-hub
 chmod +x start.sh update_and_start.sh dedup.sh
