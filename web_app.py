@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""and-hub Mobile Web App — 스마트폰 브라우저에 예쁜 모바일 앱 화면을 띄워주는 경량 서버.
+"""and-hub Mobile Web App — 윈도우 탐색기 스타일 폴더 선택기가 탑재된 모바일 터치 앱.
 
 외부 라이브러리(pip) 설치 필요 없이 파이썬 표준 라이브러리(http.server)만으로 동작합니다.
-스마트폰 화면에서 터치 한 번으로 스캔, 중복 정리, 원위치 복구, 휴지통 비우기를 수행합니다.
+스마트폰과 PC 브라우저에서 탐색기 창으로 폴더를 선택하고 중복 스캔/정리를 수행합니다.
 """
 
 import json
@@ -19,9 +19,14 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import dedup_downloads as dedup
 
 PORT = 8088
+IS_WIN = sys.platform.startswith("win")
 DEFAULT_DIR = "/storage/emulated/0/Download"
-if sys.platform.startswith("win"):
-    DEFAULT_DIR = os.path.join(os.environ.get("USERPROFILE", "C:\\Users\\Default"), "Downloads")
+ROOT_BASE = "/storage/emulated/0"
+
+if IS_WIN:
+    USER_HOME = os.environ.get("USERPROFILE", "C:\\Users\\Default")
+    DEFAULT_DIR = os.path.join(USER_HOME, "Downloads")
+    ROOT_BASE = USER_HOME
 
 HTML_PAGE = """<!DOCTYPE html>
 <html lang="ko">
@@ -45,12 +50,18 @@ HTML_PAGE = """<!DOCTYPE html>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background: var(--bg); color: var(--text-main); min-height: 100vh; padding: 16px; display: flex; flex-direction: column; align-items: center; }
     .container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 14px; }
-    .header { text-align: center; padding: 12px 0; }
+    .header { text-align: center; padding: 10px 0; }
     .header h1 { font-size: 20px; font-weight: 700; color: #60a5fa; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .header p { font-size: 12px; color: var(--text-sub); margin-top: 4px; }
     .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
     .label { font-size: 13px; color: var(--text-sub); font-weight: 600; margin-bottom: 6px; display: block; }
-    .input-box { width: 100%; background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: #fff; font-size: 13px; }
+    .input-group { display: flex; gap: 8px; margin-bottom: 8px; }
+    .input-box { flex: 1; background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: #fff; font-size: 13px; }
+    .btn-browse { background: #334155; border: 1px solid #475569; color: #f8fafc; border-radius: 8px; padding: 0 14px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .btn-browse:hover { background: #475569; }
+    .preset-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; font-size: 11px; color: #cbd5e1; cursor: pointer; transition: all 0.15s; }
+    .tag:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
     .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .btn { border: none; border-radius: 10px; padding: 14px 8px; font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s; }
     .btn:active { transform: scale(0.97); filter: brightness(0.9); }
@@ -58,22 +69,46 @@ HTML_PAGE = """<!DOCTYPE html>
     .btn-success { background: var(--success); }
     .btn-warning { background: var(--warning); color: #000; }
     .btn-danger { background: var(--danger); }
-    .btn-full { grid-column: span 2; }
     .log-box { background: #0b0f19; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 12px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; line-height: 1.5; color: #cbd5e1; }
-    .stat-badge { display: flex; justify-content: space-between; font-size: 12px; padding: 8px 12px; background: #0f172a; border-radius: 8px; border: 1px solid var(--border); }
     .loader { display: none; text-align: center; color: #60a5fa; font-size: 13px; font-weight: 600; padding: 6px 0; }
+    
+    /* 윈도우 탐색기 스타일 모달 팝업 */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
+    .explorer-window { width: 100%; max-width: 440px; background: #1e293b; border: 1px solid #475569; border-radius: 14px; display: flex; flex-direction: column; max-height: 80vh; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .explorer-header { background: #0f172a; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+    .explorer-header span { font-weight: 700; font-size: 15px; color: #60a5fa; }
+    .explorer-header button { background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; }
+    .breadcrumb-bar { background: #0b0f19; padding: 8px 12px; font-size: 12px; color: #94a3b8; border-bottom: 1px solid var(--border); word-break: break-all; }
+    .folder-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+    .folder-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; background: #0f172a; border: 1px solid transparent; cursor: pointer; font-size: 13px; color: #f1f5f9; transition: background 0.15s; }
+    .folder-item:hover { background: #334155; border-color: var(--primary); }
+    .folder-item .icon { font-size: 16px; }
+    .explorer-footer { padding: 12px 16px; background: #0f172a; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-exp { padding: 8px 14px; font-size: 13px; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; }
+    .btn-exp-up { background: #334155; color: #fff; }
+    .btn-exp-select { background: var(--primary); color: #fff; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <h1>📱 and-hub 중복 파일 정리기</h1>
-      <p>스마트폰 다운로드 서랍 초고속 자동 정리 도우미</p>
+      <p>스마트폰/PC 다운로드 서랍 초고속 자동 정리 도우미</p>
     </div>
 
     <div class="card">
       <label class="label">📂 대상 폴더 경로</label>
-      <input type="text" id="targetDir" class="input-box" value="DEFAULT_DIR_PLACEHOLDER">
+      <div class="input-group">
+        <input type="text" id="targetDir" class="input-box" value="DEFAULT_DIR_PLACEHOLDER">
+        <button class="btn-browse" onclick="openExplorer()">📂 탐색기 찾기</button>
+      </div>
+      <div class="preset-tags">
+        <span class="tag" onclick="setPreset('Download')">📁 다운로드</span>
+        <span class="tag" onclick="setPreset('DCIM')">📷 사진/카메라</span>
+        <span class="tag" onclick="setPreset('KakaoTalk')">💬 카카오톡</span>
+        <span class="tag" onclick="setPreset('Documents')">📄 문서</span>
+        <span class="tag" onclick="setPreset('ROOT')">🏠 전체 저장소</span>
+      </div>
     </div>
 
     <div class="card">
@@ -104,11 +139,99 @@ HTML_PAGE = """<!DOCTYPE html>
         <label class="label" style="margin: 0;">📜 실시간 작업 로그</label>
         <button onclick="clearLog()" style="background: none; border: none; color: #64748b; font-size: 11px; cursor: pointer;">로그 지우기</button>
       </div>
-      <div id="logBox" class="log-box">준비 완료. 작업 버튼을 터치하세요.</div>
+      <div id="logBox" class="log-box">준비 완료. [📂 탐색기 찾기]로 폴더를 선택하거나 작업 버튼을 터치하세요.</div>
+    </div>
+  </div>
+
+  <!-- 윈도우 탐색기 스타일 폴더 선택 모달 -->
+  <div id="explorerModal" class="modal-overlay">
+    <div class="explorer-window">
+      <div class="explorer-header">
+        <span>📂 폴더 탐색기 (Folder Browser)</span>
+        <button onclick="closeExplorer()">✕</button>
+      </div>
+      <div id="breadcrumbBar" class="breadcrumb-bar">경로: 로딩 중...</div>
+      <div id="folderList" class="folder-list">
+        <div style="text-align:center; padding: 20px; color: #94a3b8;">폴더 목록 로딩 중...</div>
+      </div>
+      <div class="explorer-footer">
+        <button id="btnUp" class="btn-exp btn-exp-up" onclick="goUpFolder()">⬆️ 상위 폴더</button>
+        <button class="btn-exp btn-exp-select" onclick="selectCurrentFolder()">✅ 이 폴더 선택</button>
+      </div>
     </div>
   </div>
 
   <script>
+    let currentExplorerPath = document.getElementById('targetDir').value;
+    let parentExplorerPath = "";
+
+    function setPreset(type) {
+      const isWin = "IS_WIN_FLAG" === "True";
+      let p = "";
+      if (isWin) {
+        const home = "USER_HOME_PLACEHOLDER";
+        if (type === 'Download') p = home + "\\\\Downloads";
+        else if (type === 'DCIM') p = home + "\\\\Pictures";
+        else if (type === 'Documents') p = home + "\\\\Documents";
+        else if (type === 'ROOT') p = home;
+        else p = home + "\\\\Downloads";
+      } else {
+        if (type === 'Download') p = "/storage/emulated/0/Download";
+        else if (type === 'DCIM') p = "/storage/emulated/0/DCIM";
+        else if (type === 'KakaoTalk') p = "/storage/emulated/0/KakaoTalk";
+        else if (type === 'Documents') p = "/storage/emulated/0/Documents";
+        else if (type === 'ROOT') p = "/storage/emulated/0";
+      }
+      document.getElementById('targetDir').value = p;
+    }
+
+    async function openExplorer() {
+      document.getElementById('explorerModal').style.display = 'flex';
+      loadFolder(document.getElementById('targetDir').value);
+    }
+
+    function closeExplorer() {
+      document.getElementById('explorerModal').style.display = 'none';
+    }
+
+    async function loadFolder(path) {
+      document.getElementById('breadcrumbBar').innerText = `경로: ${path}`;
+      document.getElementById('folderList').innerHTML = '<div style="text-align:center; padding: 20px; color: #94a3b8;">⏳ 로딩 중...</div>';
+      try {
+        const res = await fetch(`/api/browse?dir=${encodeURIComponent(path)}`);
+        const data = await res.json();
+        currentExplorerPath = data.current;
+        parentExplorerPath = data.parent;
+        document.getElementById('breadcrumbBar').innerText = `경로: ${data.current}`;
+        
+        let html = '';
+        if (data.folders.length === 0) {
+          html = '<div style="text-align:center; padding: 20px; color: #64748b;">(하위 폴더가 없습니다)</div>';
+        } else {
+          data.folders.forEach(f => {
+            html += `<div class="folder-item" onclick="loadFolder('${f.path.replace(/\\\\/g, '\\\\\\\\')}')">
+              <span class="icon">📁</span>
+              <span>${f.name}</span>
+            </div>`;
+          });
+        }
+        document.getElementById('folderList').innerHTML = html;
+      } catch (err) {
+        document.getElementById('folderList').innerHTML = `<div style="color:#ef4444; padding:15px;">접근 실패: ${err.message}</div>`;
+      }
+    }
+
+    function goUpFolder() {
+      if (parentExplorerPath && parentExplorerPath !== currentExplorerPath) {
+        loadFolder(parentExplorerPath);
+      }
+    }
+
+    function selectCurrentFolder() {
+      document.getElementById('targetDir').value = currentExplorerPath;
+      closeExplorer();
+    }
+
     async function runAction(act) {
       const dir = document.getElementById('targetDir').value.trim();
       if (!dir) { alert('대상 폴더 경로를 입력하세요.'); return; }
@@ -151,11 +274,23 @@ class DedupRequestHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "text/html; charset=utf-8")
             self.end_headers()
-            html_content = HTML_PAGE.replace("DEFAULT_DIR_PLACEHOLDER", DEFAULT_DIR)
+            html_content = (HTML_PAGE
+                            .replace("DEFAULT_DIR_PLACEHOLDER", DEFAULT_DIR)
+                            .replace("IS_WIN_FLAG", str(IS_WIN))
+                            .replace("USER_HOME_PLACEHOLDER", ROOT_BASE.replace("\\", "\\\\")))
             self.wfile.write(html_content.encode("utf-8"))
             return
 
-        # API Endpoints
+        # 윈도우 탐색기 폴더 브라우징 API
+        if path == "/api/browse":
+            res_data = self.browse_directory(target_dir)
+            self.send_response(200)
+            self.send_header("Content-type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps(res_data, ensure_ascii=False).encode("utf-8"))
+            return
+
+        # 정리 액션 API Endpoints
         if path.startswith("/api/"):
             action = path.replace("/api/", "")
             output = self.handle_api(action, target_dir)
@@ -167,6 +302,35 @@ class DedupRequestHandler(BaseHTTPRequestHandler):
 
         self.send_response(404)
         self.end_headers()
+
+    def browse_directory(self, path):
+        """탐색기 모달용 디렉터리 목록 반환."""
+        if not path or not os.path.exists(path):
+            path = ROOT_BASE if os.path.exists(ROOT_BASE) else DEFAULT_DIR
+
+        path = os.path.abspath(path)
+        parent = os.path.dirname(path)
+        folders = []
+        try:
+            with os.scandir(path) as it:
+                for entry in it:
+                    if entry.is_dir(follow_symlinks=False):
+                        if entry.name.startswith(".") or entry.name == dedup.TRASH_NAME:
+                            continue
+                        folders.append({
+                            "name": entry.name,
+                            "path": entry.path
+                        })
+            folders.sort(key=lambda x: x["name"].lower())
+        except Exception as e:
+            pass
+
+        return {
+            "status": "ok",
+            "current": path,
+            "parent": parent,
+            "folders": folders
+        }
 
     def handle_api(self, action, target_dir):
         if not os.path.exists(target_dir):
@@ -215,14 +379,12 @@ class DedupRequestHandler(BaseHTTPRequestHandler):
         return f.getvalue()
 
     def log_message(self, format, *args):
-        # 불필요한 콘솔 HTTP 요청 로그 숨김
         pass
 
 
 def open_browser():
     time.sleep(0.5)
     url = f"http://localhost:{PORT}"
-    # Android Termux 환경에서는 termux-open-url 우선 시도
     try:
         subprocess.run(["termux-open-url", url], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
