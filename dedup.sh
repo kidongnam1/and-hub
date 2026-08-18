@@ -13,6 +13,7 @@
 #   folders-clean   중복 폴더 정리 → 휴지통으로 이동
 #   all-preview     세 가지(파일+이름+폴더) 모두 미리보기      [안 지움]
 #   all             세 가지 모두 정리 → 휴지통으로 이동
+#   restore         _duplicates_trash 항목 원래 위치로 원상복구
 #   empty-trash     _duplicates_trash 휴지통 완전 비우기
 #   help            이 도움말 보기
 #
@@ -22,7 +23,7 @@
 
 set -euo pipefail
 
-BRANCH="claude/dedup-downloads-migration-gprgcj"
+BRANCH="main"
 DEFAULT_DIR="/storage/emulated/0/Download"
 
 main() {
@@ -35,12 +36,19 @@ main() {
     cd "$here"
 
     if [ "$cmd" = "help" ] || [ "$cmd" = "-h" ] || [ "$cmd" = "--help" ]; then
-        sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
         exit 0
     fi
 
     local py="$here/dedup_downloads.py"
     local trash="$target/_duplicates_trash"
+
+    # 복구 명령
+    if [ "$cmd" = "restore" ]; then
+        echo "==> 원래 위치로 복구 실행중..."
+        python3 "$py" "$target" --restore
+        exit 0
+    fi
 
     # 휴지통 비우기는 업데이트가 필요 없으니 먼저 처리
     if [ "$cmd" = "empty-trash" ]; then
@@ -83,7 +91,7 @@ main() {
         folders-clean)  args=(--folders --delete --trash) ;;
         *)
             echo "[오류] 모르는 명령: $cmd"
-            echo "사용 가능: preview clean files files-clean folders folders-clean all-preview all empty-trash help"
+            echo "사용 가능: preview clean files files-clean folders folders-clean all-preview all restore empty-trash help"
             exit 1
             ;;
     esac
