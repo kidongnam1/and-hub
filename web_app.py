@@ -264,6 +264,14 @@ HTML_PAGE = """<!DOCTYPE html>
 
 
 class DedupRequestHandler(BaseHTTPRequestHandler):
+    def send_bytes(self, status, content_type, body):
+        self.send_response(status)
+        self.send_header("Content-type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
@@ -271,37 +279,27 @@ class DedupRequestHandler(BaseHTTPRequestHandler):
         target_dir = query.get("dir", [DEFAULT_DIR])[0]
 
         if path == "/" or path == "/index.html":
-            self.send_response(200)
-            self.send_header("Content-type", "text/html; charset=utf-8")
-            self.end_headers()
             html_content = (HTML_PAGE
                             .replace("DEFAULT_DIR_PLACEHOLDER", DEFAULT_DIR)
                             .replace("IS_WIN_FLAG", str(IS_WIN))
                             .replace("USER_HOME_PLACEHOLDER", ROOT_BASE.replace("\\", "\\\\")))
-            self.wfile.write(html_content.encode("utf-8"))
+            self.send_bytes(200, "text/html; charset=utf-8", html_content.encode("utf-8"))
             return
 
         # 윈도우 탐색기 폴더 브라우징 API
         if path == "/api/browse":
             res_data = self.browse_directory(target_dir)
-            self.send_response(200)
-            self.send_header("Content-type", "application/json; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(json.dumps(res_data, ensure_ascii=False).encode("utf-8"))
+            self.send_bytes(200, "application/json; charset=utf-8", json.dumps(res_data, ensure_ascii=False).encode("utf-8"))
             return
 
         # 정리 액션 API Endpoints
         if path.startswith("/api/"):
             action = path.replace("/api/", "")
             output = self.handle_api(action, target_dir)
-            self.send_response(200)
-            self.send_header("Content-type", "application/json; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(json.dumps({"status": "ok", "output": output}, ensure_ascii=False).encode("utf-8"))
+            self.send_bytes(200, "application/json; charset=utf-8", json.dumps({"status": "ok", "output": output}, ensure_ascii=False).encode("utf-8"))
             return
 
-        self.send_response(404)
-        self.end_headers()
+        self.send_bytes(404, "text/plain; charset=utf-8", b"Not Found")
 
     def browse_directory(self, path):
         """탐색기 모달용 디렉터리 목록 반환."""

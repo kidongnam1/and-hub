@@ -14,7 +14,7 @@ termux-setup-storage
 git clone https://github.com/kidongnam1/and-hub.git
 cd and-hub
 # 이미 받았다면 최신화
-git pull origin main
+git pull --ff-only origin main
 
 # 파일 하나만 받고 싶을 때 (clone 대신)
 curl -O https://raw.githubusercontent.com/kidongnam1/and-hub/main/dedup_downloads.py
@@ -40,6 +40,15 @@ bash dedup.sh help           # 도움말
 
 # 다른 폴더를 청소하려면 뒤에 경로를 붙이면 됩니다
 bash dedup.sh clean /storage/emulated/0/DCIM
+```
+
+### 모바일 웹앱 실행
+이미 `~/and-hub` 폴더가 있으면 다시 clone하지 말고 아래만 실행합니다.
+
+```bash
+cd ~/and-hub
+chmod +x start.sh update_and_start.sh dedup.sh
+./update_and_start.sh
 ```
 
 ### Windows PC 사용 방법: start_dedup.bat & 주간 자동 스케줄러

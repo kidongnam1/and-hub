@@ -37,7 +37,14 @@ cd and-hub
 
 ```bash
 cd ~/and-hub
-git pull origin main
+git pull --ff-only origin main
+```
+
+이미 `~/and-hub` 안에 있다면 다시 `git clone` 하지 않습니다. clone은 처음 한 번만 쓰고, 그다음부터는 pull만 씁니다.
+
+```bash
+cd ~/and-hub
+git pull --ff-only origin main
 ```
 
 ---
@@ -68,10 +75,10 @@ bash dedup.sh empty-trash
 
 ```bash
 # 1) 대화형 확인 정리 (물어보고 삭제 - 가장 추천!)
-echo 'alias ddask="cd ~/and-hub && git pull origin main && bash dedup.sh all-ask"' >> ~/.bashrc
+echo 'alias ddask="cd ~/and-hub && git pull --ff-only origin main && bash dedup.sh all-ask"' >> ~/.bashrc
 
 # 2) 일괄 자동 정리 (물어보지 않고 삭제)
-echo 'alias ddclean="cd ~/and-hub && git pull origin main && bash dedup.sh all"' >> ~/.bashrc
+echo 'alias ddclean="cd ~/and-hub && git pull --ff-only origin main && bash dedup.sh all"' >> ~/.bashrc
 
 # 3) 원상복구
 echo 'alias ddrestore="cd ~/and-hub && bash dedup.sh restore"' >> ~/.bashrc
@@ -109,6 +116,7 @@ bash scripts/setup_termux_widget.sh
 |------|-------------|
 | `Permission denied` / `/storage` 안 보임 | `termux-setup-storage` 다시 실행 후 허용 |
 | `Already up to date.` | 이미 최신 코드라는 뜻 (정상) |
+| `destination path ... already exists and is not an empty directory` | 이미 `~/and-hub`가 있으니 clone하지 말고 `cd ~/and-hub && git pull --ff-only origin main` 실행 |
+| `cd: ... ruby_termux_center: No such file or directory` | 이 프로젝트의 폴더명은 `~/and-hub`입니다. `cd ~/and-hub`로 이동 |
 | 한글/공백 경로 오류 | 경로를 `"따옴표"` 로 감싸기 |
 | 복구하고 싶을 때 | `bash dedup.sh restore` (또는 `ddrestore`) 실행 시 `_duplicates_trash/undo_log.json` 기록 기반 100% 원위치 복원 |
-

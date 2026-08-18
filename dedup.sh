@@ -71,8 +71,8 @@ main() {
     fi
 
     # 1) 깃허브에서 최신 코드 받기
-    echo "==> 최신 코드 받는 중 (git pull $BRANCH)"
-    git pull origin "$BRANCH" || {
+    echo "==> 최신 코드 받는 중 (git pull --ff-only origin $BRANCH)"
+    git pull --ff-only origin "$BRANCH" || {
         echo "[경고] git pull 실패 — 현재 폴더의 버전으로 계속합니다."
     }
 
