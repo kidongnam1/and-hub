@@ -252,7 +252,7 @@ def folder_signatures(root, workers):
     files = [f for f in iter_files(root, recursive=True) if os.path.isfile(f) and not os.path.islink(f)]
     
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        future_to_fpath = {executor.submit(file_hash, fpath, False): fpath for f in files}
+        future_to_fpath = {executor.submit(file_hash, fpath, False): fpath for fpath in files}
         for future in as_completed(future_to_fpath):
             fpath = future_to_fpath[future]
             h = future.result()
