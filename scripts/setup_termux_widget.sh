@@ -5,17 +5,17 @@ mkdir -p ~/.shortcuts
 
 cat << 'EOF' > ~/.shortcuts/중복정리_모바일앱.sh
 #!/data/data/com.termux/files/usr/bin/bash
-cd ~/and-hub && git pull origin main && python3 web_app.py
+cd ~/and-hub && ./update_and_start.sh
 EOF
 
 cat << 'EOF' > ~/.shortcuts/중복정리_대화형.sh
 #!/data/data/com.termux/files/usr/bin/bash
-cd ~/and-hub && git pull origin main && bash dedup.sh all-ask
+cd ~/and-hub && git pull --ff-only origin main && bash dedup.sh all-ask
 EOF
 
 cat << 'EOF' > ~/.shortcuts/중복정리_자동.sh
 #!/data/data/com.termux/files/usr/bin/bash
-cd ~/and-hub && git pull origin main && bash dedup.sh all
+cd ~/and-hub && git pull --ff-only origin main && bash dedup.sh all
 EOF
 
 cat << 'EOF' > ~/.shortcuts/중복정리_원상복구.sh

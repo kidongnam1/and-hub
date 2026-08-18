@@ -51,6 +51,14 @@ chmod +x start.sh update_and_start.sh dedup.sh
 ./update_and_start.sh
 ```
 
+폰에서 실행 전 점검:
+
+```bash
+cd ~/and-hub
+chmod +x scripts/*.sh
+./scripts/phone_smoke_check.sh
+```
+
 ### Windows PC 사용 방법: start_dedup.bat & 주간 자동 스케줄러
 - **원클릭 메뉴**: Windows 사용자는 `start_dedup.bat` 파일만 더블클릭하면 파란 창에서 1번(미리보기), 2번(안전 정리), 3번(원위치 복구)을 메뉴로 실행할 수 있습니다.
 - **주간 자동 청소 등록**: `powershell -ExecutionPolicy Bypass -File scripts/schedule_auto_clean.ps1` 실행 시 매주 일요일 오전 09:00시마다 다운로드 폴더 중복 파일이 자동으로 `_duplicates_trash`로 정돈됩니다.

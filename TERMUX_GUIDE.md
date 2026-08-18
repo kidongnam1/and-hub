@@ -53,6 +53,29 @@ git pull --ff-only origin main
 
 ```bash
 cd ~/and-hub
+chmod +x start.sh update_and_start.sh dedup.sh scripts/*.sh
+
+# 모바일 웹앱 실행
+./update_and_start.sh
+```
+
+서버가 켜지면 브라우저에서 아래 주소를 엽니다.
+
+```text
+http://localhost:8088
+```
+
+실행 전 점검은 아래처럼 합니다.
+
+```bash
+cd ~/and-hub
+./scripts/phone_smoke_check.sh
+```
+
+중복 정리 명령은 아래처럼 직접 실행할 수도 있습니다.
+
+```bash
+cd ~/and-hub
 
 # 1) 깃허브 최신 받기 + 미리보기
 bash dedup.sh all-preview
@@ -118,5 +141,7 @@ bash scripts/setup_termux_widget.sh
 | `Already up to date.` | 이미 최신 코드라는 뜻 (정상) |
 | `destination path ... already exists and is not an empty directory` | 이미 `~/and-hub`가 있으니 clone하지 말고 `cd ~/and-hub && git pull --ff-only origin main` 실행 |
 | `cd: ... ruby_termux_center: No such file or directory` | 이 프로젝트의 폴더명은 `~/and-hub`입니다. `cd ~/and-hub`로 이동 |
+| `Not possible to fast-forward` | 폰에서 파일을 직접 고친 상태입니다. `git status`를 먼저 보고 필요한 파일을 따로 보관한 뒤 정리 |
+| `Could not resolve host` | 인터넷/DNS 문제입니다. Wi-Fi/LTE 연결을 확인하고 다시 실행 |
 | 한글/공백 경로 오류 | 경로를 `"따옴표"` 로 감싸기 |
 | 복구하고 싶을 때 | `bash dedup.sh restore` (또는 `ddrestore`) 실행 시 `_duplicates_trash/undo_log.json` 기록 기반 100% 원위치 복원 |
