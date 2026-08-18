@@ -1,9 +1,9 @@
 # and-hub
-안드로이드와 깃허브 연결
+안드로이드와 깃허브 연결 & 중복 파일/폴더 자동 정리 도구
 
 ## dedup_downloads.py
-내용이 같은 중복 **파일** 또는 **폴더**를 찾아 정리하는 스크립트입니다.
-(크기로 1차 묶고 SHA-256 해시로 내용을 비교합니다.)
+내용이 같은 중복 **파일** 또는 **폴더**를 찾아 정리하는 초고속 멀티스레드 스크립트입니다.  
+(크기 1차 분류 → 10MB 이상 64KB 부분 해시 → SHA-256 전체 해시 비교 후 안전 정리 및 원클릭 복구를 지원합니다.)
 
 ### Termux에서 사용하기
 ```bash
@@ -14,7 +14,7 @@ termux-setup-storage
 git clone https://github.com/kidongnam1/and-hub.git
 cd and-hub
 # 이미 받았다면 최신화
-git pull
+git pull origin main
 
 # 파일 하나만 받고 싶을 때 (clone 대신)
 curl -O https://raw.githubusercontent.com/kidongnam1/and-hub/main/dedup_downloads.py
@@ -33,6 +33,7 @@ bash dedup.sh folders        # 중복 폴더 미리보기
 bash dedup.sh folders-clean  # 중복 폴더 정리 → 휴지통
 bash dedup.sh all-preview    # 세 가지(파일+이름+폴더) 모두 미리보기
 bash dedup.sh all            # 세 가지 모두 정리 → 휴지통  (가장 추천)
+bash dedup.sh restore        # 휴지통(_duplicates_trash) 항목 원래 위치로 원상복구
 bash dedup.sh empty-trash    # 휴지통(_duplicates_trash) 비우기
 bash dedup.sh help           # 도움말
 
@@ -40,7 +41,10 @@ bash dedup.sh help           # 도움말
 bash dedup.sh clean /storage/emulated/0/DCIM
 ```
 
-### (직접 실행) 실행 예시
+### Windows PC 사용 방법: start_dedup.bat
+Windows 사용자는 `start_dedup.bat` 파일만 더블클릭하면 파란 창에서 1번(미리보기), 2번(안전 정리), 3번(원위치 복구)을 메뉴로 실행할 수 있습니다.
+
+### (직접 실행) 파이썬 실행 예시
 ```bash
 # ① 중복 파일 미리보기 (하위 폴더 포함, 아무것도 안 지움)
 python3 dedup_downloads.py /storage/emulated/0/Download --recursive
@@ -48,16 +52,13 @@ python3 dedup_downloads.py /storage/emulated/0/Download --recursive
 # ② 안전 정리 — 휴지통(_duplicates_trash)으로 이동
 python3 dedup_downloads.py /storage/emulated/0/Download --recursive --delete --trash
 
-# ③ 중복 폴더 미리보기 (내용·구조가 완전히 같은 폴더)
-python3 dedup_downloads.py /storage/emulated/0/Download --folders
+# ③ 원위치 복구 (휴지통에 있던 파일들을 원래 자리로 복원)
+python3 dedup_downloads.py /storage/emulated/0/Download --restore
 
 # ④ 중복 폴더 정리 — 휴지통으로 이동
 python3 dedup_downloads.py /storage/emulated/0/Download --folders --delete --trash
 
-# ⑤ 이름 사본 미리보기 — "사진 (2).png" 처럼 끝에 (숫자)가 붙은 파일
-python3 dedup_downloads.py /storage/emulated/0/Download --by-name --recursive
-
-# ⑥ 이름 사본 정리 — 휴지통으로 이동
+# ⑤ 이름 사본 정리 — 휴지통으로 이동
 python3 dedup_downloads.py /storage/emulated/0/Download --by-name --recursive --delete --trash
 ```
 
@@ -67,9 +68,11 @@ python3 dedup_downloads.py /storage/emulated/0/Download --by-name --recursive --
 | (없음) | **미리보기만** — 무엇이 지워질지와 확보 가능 용량만 출력 |
 | `--delete` | 실제 삭제 실행 |
 | `--trash` | 삭제 대신 `_duplicates_trash` 폴더로 이동 (가장 안전, 복구 가능) |
+| `--restore` | `_duplicates_trash` 내 항목들을 `undo_log.json` 기록 기반 원래 위치로 원상복구 |
 | `--recursive` | 하위 폴더까지 검사 (파일 모드 전용) |
 | `--folders` | 파일 대신 내용이 같은 중복 **폴더**를 탐지 (항상 재귀) |
 | `--by-name` | 이름 끝 ` (숫자)` 사본을 중복으로 처리 (**내용은 비교 안 함**) |
+| `--workers` | 멀티스레드 병렬 처리 스레드 수 지정 (기본: 자동) |
 
-권장 순서: 먼저 옵션 없이 미리보기 → 결과 확인 → `--delete --trash`로 정리.
-각 그룹에서 가장 얕고 짧은 경로의 파일/폴더를 남기고 나머지를 정리합니다.
+권장 순서: 먼저 옵션 없이 미리보기 → 결과 확인 → `--delete --trash`로 정리.  
+실수나 문제 발생 시 `--restore`로 100% 원래 자리로 복원 가능합니다.
