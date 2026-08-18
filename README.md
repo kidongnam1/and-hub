@@ -41,8 +41,9 @@ bash dedup.sh help           # 도움말
 bash dedup.sh clean /storage/emulated/0/DCIM
 ```
 
-### Windows PC 사용 방법: start_dedup.bat
-Windows 사용자는 `start_dedup.bat` 파일만 더블클릭하면 파란 창에서 1번(미리보기), 2번(안전 정리), 3번(원위치 복구)을 메뉴로 실행할 수 있습니다.
+### Windows PC 사용 방법: start_dedup.bat & 주간 자동 스케줄러
+- **원클릭 메뉴**: Windows 사용자는 `start_dedup.bat` 파일만 더블클릭하면 파란 창에서 1번(미리보기), 2번(안전 정리), 3번(원위치 복구)을 메뉴로 실행할 수 있습니다.
+- **주간 자동 청소 등록**: `powershell -ExecutionPolicy Bypass -File scripts/schedule_auto_clean.ps1` 실행 시 매주 일요일 오전 09:00시마다 다운로드 폴더 중복 파일이 자동으로 `_duplicates_trash`로 정돈됩니다.
 
 ### (직접 실행) 파이썬 실행 예시
 ```bash
