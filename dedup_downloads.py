@@ -176,6 +176,29 @@ def remove_path(path, args, trash_dir):
         print(f"  [실패]  {path} ({e})")
 
 
+def prompt_interactive(args, prompt_str):
+    """대화형 확인 처리. True: 진행, False: 건너뜀, None: 사용자 종료"""
+    if not (args.interactive and args.delete):
+        return True
+    try:
+        ans = input(f"  -> {prompt_str} [y/N/a(전체승인)/q(종료)]: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print("\n[중단] 사용자 입력이 중단되었습니다.")
+        return None
+
+    if ans in ('q', 'quit'):
+        print("[중단] 대화형 정리가 사용자 요청으로 중단되었습니다.")
+        return None
+    elif ans in ('a', 'all'):
+        args.interactive = False
+        return True
+    elif ans in ('y', 'yes'):
+        return True
+    else:
+        print("  -> 건너뜁니다.")
+        return False
+
+
 # ---------------------------------------------------------------- 파일 모드
 
 
@@ -231,6 +254,13 @@ def dedup_files(root, args):
         keep = keeper(paths)
         print(f"\n[중복 파일 {len(paths)}개 · 각 {human(size)}]")
         print(f"  남김:   {keep}")
+
+        res = prompt_interactive(args, "이 그룹의 중복 파일들을 정리(이동)할까요?")
+        if res is None:
+            break
+        elif res is False:
+            continue
+
         for p in paths:
             if p == keep:
                 continue
@@ -316,6 +346,13 @@ def dedup_folders(root, args):
         groups += 1
         print(f"\n[중복 폴더 {len(effective) + 1}개 · 각 {human(size)}]")
         print(f"  남김:   {keep}")
+
+        res = prompt_interactive(args, "이 중복 폴더 그룹을 정리(이동)할까요?")
+        if res is None:
+            break
+        elif res is False:
+            continue
+
         for d in effective:
             freed += signatures[d][1]
             removed += 1
@@ -352,6 +389,13 @@ def dedup_by_name(root, args):
         total_groups += 1
         print(f"\n[이름 중복 {len(members)}개 · {base}{ext}]")
         print(f"  남김:   {keep}")
+
+        res = prompt_interactive(args, f"'{base}{ext}' 사본들을 정리(이동)할까요?")
+        if res is None:
+            break
+        elif res is False:
+            continue
+
         for _, p in members[1:]:
             try:
                 freed += os.path.getsize(p)
@@ -411,6 +455,8 @@ def main():
     ap.add_argument("--delete", action="store_true", help="실제로 삭제 실행")
     ap.add_argument("--trash", action="store_true",
                     help="삭제 대신 _duplicates_trash 폴더로 이동")
+    ap.add_argument("-i", "--interactive", action="store_true",
+                    help="중복 그룹별로 삭제/이동 전 대화형으로 물어봄")
     ap.add_argument("--recursive", action="store_true",
                     help="하위 폴더까지 검사 (파일 모드 전용)")
     ap.add_argument("--restore", action="store_true",

@@ -8,18 +8,20 @@ echo ===================================================
 echo     and-hub 중복 파일/폴더 정리 도우미 (Windows)
 echo ===================================================
 echo  [1] 다운로드 폴더 전체 미리보기 (파일+이름사본+폴더) [지우지 않음]
-echo  [2] 다운로드 폴더 전체 안전 정리 (_duplicates_trash 이동)
-echo  [3] 휴지통(_duplicates_trash) 파일 원위치 복구 (Restore)
-echo  [4] 휴지통(_duplicates_trash) 완전 비우기
-echo  [5] 종료
+echo  [2] 다운로드 폴더 전체 일괄 안전 정리 (_duplicates_trash 이동)
+echo  [3] 대화형 정밀 정리 (그룹별로 물어보고 정리) [-i]
+echo  [4] 휴지통(_duplicates_trash) 파일 원위치 복구 (Restore)
+echo  [5] 휴지통(_duplicates_trash) 완전 비우기
+echo  [6] 종료
 echo ===================================================
-set /p CHOICE="메뉴 번호를 선택하세요 (1-5): "
+set /p CHOICE="메뉴 번호를 선택하세요 (1-6): "
 
 if "%CHOICE%"=="1" goto PREVIEW
 if "%CHOICE%"=="2" goto CLEAN
-if "%CHOICE%"=="3" goto RESTORE
-if "%CHOICE%"=="4" goto EMPTY_TRASH
-if "%CHOICE%"=="5" goto END
+if "%CHOICE%"=="3" goto INTERACTIVE
+if "%CHOICE%"=="4" goto RESTORE
+if "%CHOICE%"=="5" goto EMPTY_TRASH
+if "%CHOICE%"=="6" goto END
 goto MENU
 
 :PREVIEW
@@ -34,12 +36,22 @@ goto MENU
 
 :CLEAN
 echo.
-echo ==> 다운로드 폴더 중복 파일을 휴지통으로 정리합니다...
+echo ==> 다운로드 폴더 중복 파일을 휴지통으로 일괄 정리합니다...
 python "%~dp0dedup_downloads.py" "%USERPROFILE%\Downloads" --recursive --delete --trash
 python "%~dp0dedup_downloads.py" "%USERPROFILE%\Downloads" --by-name --recursive --delete --trash
 python "%~dp0dedup_downloads.py" "%USERPROFILE%\Downloads" --folders --delete --trash
 echo.
 echo 정리 완료! 파일들은 _duplicates_trash 폴더로 보관되었습니다.
+echo.
+pause
+goto MENU
+
+:INTERACTIVE
+echo.
+echo ==> 중복 그룹별로 대화형 정리를 시작합니다...
+python "%~dp0dedup_downloads.py" "%USERPROFILE%\Downloads" --recursive --delete --trash -i
+python "%~dp0dedup_downloads.py" "%USERPROFILE%\Downloads" --by-name --recursive --delete --trash -i
+python "%~dp0dedup_downloads.py" "%USERPROFILE%\Downloads" --folders --delete --trash -i
 echo.
 pause
 goto MENU

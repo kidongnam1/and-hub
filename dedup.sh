@@ -69,9 +69,10 @@ main() {
     }
 
     # 2) 'all' 계열은 세 가지를 차례로 실행
-    if [ "$cmd" = "all" ] || [ "$cmd" = "all-preview" ]; then
+    if [ "$cmd" = "all" ] || [ "$cmd" = "all-preview" ] || [ "$cmd" = "all-ask" ]; then
         local extra=()
         [ "$cmd" = "all" ] && extra=(--delete --trash)
+        [ "$cmd" = "all-ask" ] && extra=(--delete --trash -i)
         run_step "$py" "$target" "[1/3] 내용 중복 파일" --recursive "${extra[@]}"
         run_step "$py" "$target" "[2/3] 이름 사본"       --by-name --recursive "${extra[@]}"
         run_step "$py" "$target" "[3/3] 중복 폴더"        --folders "${extra[@]}"
@@ -85,13 +86,14 @@ main() {
     case "$cmd" in
         preview)        args=(--by-name --recursive) ;;
         clean)          args=(--by-name --recursive --delete --trash) ;;
+        ask)            args=(--by-name --recursive --delete --trash -i) ;;
         files)          args=(--recursive) ;;
         files-clean)    args=(--recursive --delete --trash) ;;
         folders)        args=(--folders) ;;
         folders-clean)  args=(--folders --delete --trash) ;;
         *)
             echo "[오류] 모르는 명령: $cmd"
-            echo "사용 가능: preview clean files files-clean folders folders-clean all-preview all restore empty-trash help"
+            echo "사용 가능: preview clean ask all-ask files files-clean folders folders-clean all-preview all restore empty-trash help"
             exit 1
             ;;
     esac
