@@ -41,7 +41,15 @@ main() {
     fi
 
     local py="$here/dedup_downloads.py"
+    local web_py="$here/web_app.py"
     local trash="$target/_duplicates_trash"
+
+    # 모바일 앱 화면 띄우기
+    if [ "$cmd" = "app" ] || [ "$cmd" = "gui" ]; then
+        echo "==> 스마트폰 모바일 앱 화면을 브라우저에 띄웁니다..."
+        python3 "$web_py"
+        exit 0
+    fi
 
     # 복구 명령
     if [ "$cmd" = "restore" ]; then
