@@ -371,12 +371,33 @@ def summarize(args, groups, removed, freed, unit):
     if groups == 0:
         print(f"중복 {unit}가 없습니다.")
         return
+    
+    status_text = '삭제한' if args.delete else '삭제 예정'
+    cap_text = '확보한' if args.delete else '확보 가능한'
+    
     print(f"중복 그룹: {groups}개")
-    print(f"{'삭제한' if args.delete else '삭제 예정'} {unit}: {removed}개")
-    print(f"{'확보한' if args.delete else '확보 가능한'} 용량: {human(freed)}")
+    print(f"{status_text} {unit}: {removed}개")
+    print(f"{cap_text} 용량: {human(freed)}")
+    
     if not args.delete:
         print("\n실제로 지우려면 --delete 를 붙여 다시 실행하세요.")
         print("안전하게 하려면 --delete --trash 로 휴지통 이동을 권장합니다.")
+
+    # 자동 로깅: logs/auto_clean.log 에 타임스탬프 기록
+    if args.delete:
+        try:
+            import datetime
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            logs_dir = os.path.join(script_dir, "logs")
+            os.makedirs(logs_dir, exist_ok=True)
+            log_path = os.path.join(logs_dir, "auto_clean.log")
+            now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            log_line = f"[{now_str}] 중복 {unit} {removed}개 {status_text} (용량: {human(freed)})\n"
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(log_line)
+            print(f"[기록] 실행 결과가 저장되었습니다: {log_path}")
+        except Exception as e:
+            print(f"[로그 기록 실패] {e}")
 
 
 def main():
